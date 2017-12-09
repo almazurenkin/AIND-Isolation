@@ -3,7 +3,7 @@ test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
 import random
-
+#from isolation import Board
 
 class SearchTimeout(Exception):
     """Subclass base exception for code clarity. """
@@ -34,8 +34,22 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    
+    # Implememnts #my_moves, simple evaluation logic that prioritizes branches
+    # with maximum number of possible moves
+    
+    my_moves = game.get_legal_moves(player)
+
+    # Check if the game is in a terminal state, and return +∞ if active player
+    # wins, and -∞ otherwise
+
+    if game.is_winner(player):
+        return float("+inf") # Player wins
+    
+    if game.is_loser(player):
+        return float("-inf") # Player loses
+
+    return float(len(my_moves))
 
 
 def custom_score_2(game, player):
@@ -60,9 +74,24 @@ def custom_score_2(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    # Implememnts #my_moves-#opponent_moves, that also takes into account
+    # number of opponent's moves left and prioritizes moves with a higher
+    # diferrence
+    
+    AGGRESSIVENESS = 2 # Aggression factor
+    
+    my_moves = game.get_legal_moves(player)
+    opponent_moves = game.get_legal_moves(game.get_opponent(player)) 
+    # Check if the game is in a terminal state, and return +∞ if active player
+    # wins, and -∞ otherwise
 
+    if game.is_winner(player):
+        return float("+inf") # Player wins
+    
+    if game.is_loser(player):
+        return float("-inf") # Player loses
+
+    return float(len(my_moves) - AGGRESSIVENESS * len(opponent_moves))
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -86,9 +115,46 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
+    # Implememnts blocking strategy: prioritize moves that ovelap with possible
+    # opponent's moves
+    
+    my_moves = game.get_legal_moves(player)
+    opponent_moves = game.get_legal_moves(game.get_opponent(player)) 
+    # Check if the game is in a terminal state, and return +∞ if active player
+    # wins, and -∞ otherwise
+
+    if game.is_winner(player):
+        return float("+inf") # Player wins
+    
+    if game.is_loser(player):
+        return float("-inf") # Player loses
+
+    return float(len(set(my_moves) & set(opponent_moves)))
+
+def custom_score_4(game, player):
+    """Calculate the heuristic value of a game state from the point of view
+    of the given player.
+
+    Note: this function should be called from within a Player instance as
+    `self.score()` -- you should not need to call this function directly.
+
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : object
+        A player instance in the current game (i.e., an object corresponding to
+        one of the player objects `game.__player_1__` or `game.__player_2__`.)
+
+    Returns
+    -------
+    float
+        The heuristic value of the current game state to the specified player.
+    """
     # TODO: finish this function!
     raise NotImplementedError
-
 
 class IsolationPlayer:
     """Base class for minimax and alphabeta agents -- this class is never
@@ -170,6 +236,48 @@ class MinimaxPlayer(IsolationPlayer):
         # Return the best move from the last completed search iteration
         return best_move
 
+    def max_value(self, game, depth):
+        """ Return score when end game or maximum depth is reached,
+        otherwise return the maximum value over all legal child
+        nodes.
+        Intuition: maximizing player's (AI's) move
+        """
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        # If reached depth limit, then return score.
+        # NOTE: score function should check if the game is in terminal state
+        # and return corresponding value (-∞) if maximizing player has no moves
+        if depth == 0:
+            return self.score(game, self)
+
+        score = float('-inf') # -∞
+        for move in game.get_legal_moves(): # For all possible moves:
+            branch = game.forecast_move(move) # 1) Forecast a move
+            score = max(score, self.min_value(branch, depth-1)) # 2) Pass move to minimizing player
+        return score
+
+    def min_value(self, game, depth):
+        """ Return score when end game or maximum depth is reached,
+        otherwise return the minimum value over all legal child
+        nodes.
+        Intuition: minimizing player's (opponent's) move
+        """
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()     
+
+        # If reached depth limit, then return score.
+        # NOTE: score function should check if the game is in terminal state
+        # and return corresponding value (+∞) if minimizing player has no moves
+        if depth == 0: 
+            return self.score(game, self)
+
+        score = float('+inf') # +∞
+        for move in game.get_legal_moves(): # For all possible moves:
+            branch = game.forecast_move(move) # 1) Forecast a move
+            score = min(score, self.max_value(branch, depth-1)) # 2) Pass move to maximizing player
+        return score
+
     def minimax(self, game, depth):
         """Implement depth-limited minimax search algorithm as described in
         the lectures.
@@ -209,11 +317,22 @@ class MinimaxPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
+        
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        possible_moves = game.get_legal_moves()
+
+        # If maximum depth is reached or no moves are available, return (-1, -1)
+        if depth == 0 or not possible_moves:
+            return (-1, -1)
+        
+        scores = []
+        for move in possible_moves: # For all possible moves...
+            branch = game.forecast_move(move) # 1) Forecast a move
+            scores.append(self.min_value(branch, depth-1)) # 2) Collect scores of all possible moves
+        # ... and return move with a maximum score
+        return possible_moves[max(range(len(scores)), key=scores.__getitem__)]
 
 
 class AlphaBetaPlayer(IsolationPlayer):
@@ -254,8 +373,79 @@ class AlphaBetaPlayer(IsolationPlayer):
         """
         self.time_left = time_left
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        # Iterative deepening until time limit is exceeded:
+        best_move = (-1, -1)
+            
+        try:
+            depth = 0
+            while True:
+                best_move = self.alphabeta(game, depth)
+                depth = depth + 1
+
+        except SearchTimeout:
+            return best_move
+
+#        best_move = self.alphabeta(game, self.search_depth)    
+
+        return best_move
+
+    def max_value(self, game, alpha, beta, depth):
+        """ Return score when end game or maximum depth is reached,
+        otherwise return the maximum value over all legal child
+        nodes.
+        Intuition: maximizing player's (AI's) move
+        """
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        # If reached depth limit, then return score.
+        # NOTE: score function should check if the game is in terminal state
+        # and return corresponding value (-∞) if maximizing player has no moves
+        if depth == 0:
+            return self.score(game, self)
+
+        score = float('-inf') # -∞
+        for move in game.get_legal_moves(): # For all possible moves:
+            branch = game.forecast_move(move) # 1) Forecast a move
+            score = max(score, self.min_value(branch, alpha, beta, depth-1)) # 2) Pass move to minimizing player
+
+            # Alpha keeps lower boundary of a maximizing node.
+            alpha = max(alpha, score)
+            # If alpha gets greater than beta, we can prune the brach:
+            # break the loop and igore other potential moves.
+            if beta <= alpha:
+                break
+
+        return score
+
+    def min_value(self, game, alpha, beta, depth):
+        """ Return score when end game or maximum depth is reached,
+        otherwise return the minimum value over all legal child
+        nodes.
+        Intuition: minimizing player's (opponent's) move
+        """
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()     
+
+        # If reached depth limit, then return score.
+        # NOTE: score function should check if the game is in terminal state
+        # and return corresponding value (+∞) if minimizing player has no moves
+        if depth == 0: 
+            return self.score(game, self)
+
+        score = float('+inf') # +∞
+        for move in game.get_legal_moves(): # For all possible moves:
+            branch = game.forecast_move(move) # 1) Forecast a move
+            score = min(score, self.max_value(branch, alpha, beta, depth-1)) # 2) Pass move to maximizing player
+
+            # Beta keeps upper boundary of a minimizing node.
+            beta = min(beta, score)
+            # If beta gets smaller than alpha, we can prune the brach:
+            # break the loop and igore other potential moves.      
+            if beta <= alpha:
+                break
+
+        return score
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
         """Implement depth-limited minimax search with alpha-beta pruning as
@@ -289,8 +479,8 @@ class AlphaBetaPlayer(IsolationPlayer):
         -------
         (int, int)
             The board coordinates of the best move found in the current search;
-            (-1, -1) if there are no legal moves
-
+            (-1, -1) if there are no legal moves.
+            
         Notes
         -----
             (1) You MUST use the `self.score()` method for board evaluation
@@ -305,5 +495,22 @@ class AlphaBetaPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        possible_moves = game.get_legal_moves()
+
+        # If maximum depth is reached or no moves are available, return (-1, -1)
+        if depth == 0 or not possible_moves:
+            return (-1, -1)
+
+        scores = []
+        for move in possible_moves: # For all possible moves:
+            branch = game.forecast_move(move) # 1) Forecast a move
+            score = self.min_value(branch, alpha, beta, depth-1) # 2) Pass move to minimizing player
+            scores.append(score)
+            # Alpha keeps lower boundary of a maximizing node.
+            alpha = max(alpha, score)
+            # If alpha gets greater than beta, we can prune the brach:
+            # break the loop and igore other potential moves.
+            if beta <= alpha:
+                break
+
+        return possible_moves[max(range(len(scores)), key=scores.__getitem__)]
