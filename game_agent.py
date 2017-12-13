@@ -2,8 +2,6 @@
 test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
-import random
-#from isolation import Board
 
 class SearchTimeout(Exception):
     """Subclass base exception for code clarity. """
@@ -36,7 +34,7 @@ def custom_score(game, player):
     """
     
     # Implememnts #my_moves, simple evaluation logic that prioritizes branches
-    # with maximum number of possible moves
+    # with maximum number of possible moves, squared
     
     my_moves = game.get_legal_moves(player)
 
@@ -49,7 +47,7 @@ def custom_score(game, player):
     if game.is_loser(player):
         return float("-inf") # Player loses
 
-    return float(len(my_moves))
+    return float(len(my_moves)**2)
 
 
 def custom_score_2(game, player):
@@ -76,7 +74,7 @@ def custom_score_2(game, player):
     """
     # Implememnts #my_moves-#opponent_moves, that also takes into account
     # number of opponent's moves left and prioritizes moves with a higher
-    # diferrence
+    # diferrence. Enforced with an "AGGRESSIVENESS" factor of 2.
     
     AGGRESSIVENESS = 2 # Aggression factor
     
@@ -130,31 +128,6 @@ def custom_score_3(game, player):
         return float("-inf") # Player loses
 
     return float(len(set(my_moves) & set(opponent_moves)))
-
-def custom_score_4(game, player):
-    """Calculate the heuristic value of a game state from the point of view
-    of the given player.
-
-    Note: this function should be called from within a Player instance as
-    `self.score()` -- you should not need to call this function directly.
-
-    Parameters
-    ----------
-    game : `isolation.Board`
-        An instance of `isolation.Board` encoding the current state of the
-        game (e.g., player locations and blocked cells).
-
-    player : object
-        A player instance in the current game (i.e., an object corresponding to
-        one of the player objects `game.__player_1__` or `game.__player_2__`.)
-
-    Returns
-    -------
-    float
-        The heuristic value of the current game state to the specified player.
-    """
-    # TODO: finish this function!
-    raise NotImplementedError
 
 class IsolationPlayer:
     """Base class for minimax and alphabeta agents -- this class is never
